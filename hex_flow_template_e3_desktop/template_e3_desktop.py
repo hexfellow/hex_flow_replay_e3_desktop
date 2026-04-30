@@ -118,7 +118,6 @@ class HexFlowTemplateE3Desktop:
                         err = self.__arm_stable_pos - state["jnt_pos"]
                         if np.fabs(err).max() < self.__arrive_threshold:
                             arrived[side] = True
-                            continue
                         self.__node.pub(
                             f"{side}_arm_ctrl",
                             build_hex_arm_ctrl(
@@ -162,7 +161,6 @@ class HexFlowTemplateE3Desktop:
                         err = self.__arm_stable_pos - state["jnt_pos"]
                         if np.fabs(err).max() < self.__arrive_threshold:
                             arrived[side] = True
-                            continue
                         self.__node.pub(
                             f"{side}_arm_ctrl",
                             build_hex_arm_ctrl(
