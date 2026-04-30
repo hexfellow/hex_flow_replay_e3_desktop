@@ -41,7 +41,8 @@ class HexFlowTemplateE3Desktop:
         self.__grip_kp = get_env_ndarray("GRIP_KP", "10.0")
         self.__grip_kd = get_env_ndarray("GRIP_KD", "0.5")
         self.__arrive_threshold = get_env_float("ARRIVE_THRESHOLD", 0.06)
-        self.__err_threshold = get_env_float("ERR_THRESHOLD", 0.02)
+        self.__arm_err_threshold = get_env_float("ARM_ERR_THRESHOLD", 0.02)
+        self.__grip_err_threshold = get_env_float("GRIP_ERR_THRESHOLD", 0.02)
 
     def __init_pubs(self):
         for side in ("left", "right"):
@@ -126,7 +127,7 @@ class HexFlowTemplateE3Desktop:
                                 jnt_pos=self.__arm_stable_pos,
                                 mit_kp=self.__arm_kp,
                                 mit_kd=self.__arm_kd,
-                                lim_err=self.__err_threshold,
+                                lim_err=self.__arm_err_threshold,
                             ),
                         )
                         self.__node.pub(
@@ -137,7 +138,7 @@ class HexFlowTemplateE3Desktop:
                                 jnt_pos=self.__grip_stable_pos,
                                 mit_kp=self.__grip_kp,
                                 mit_kd=self.__grip_kd,
-                                lim_err=self.__err_threshold,
+                                lim_err=self.__grip_err_threshold,
                             ),
                         )
 
@@ -170,7 +171,7 @@ class HexFlowTemplateE3Desktop:
                                 jnt_pos=self.__arm_stable_pos,
                                 mit_kp=self.__arm_kp,
                                 mit_kd=self.__arm_kd,
-                                lim_err=self.__err_threshold,
+                                lim_err=self.__arm_err_threshold,
                             ),
                         )
                         self.__node.pub(
@@ -181,7 +182,7 @@ class HexFlowTemplateE3Desktop:
                                 jnt_pos=self.__grip_stable_pos,
                                 mit_kp=self.__grip_kp,
                                 mit_kd=self.__grip_kd,
-                                lim_err=self.__err_threshold,
+                                lim_err=self.__grip_err_threshold,
                             ),
                         )
 

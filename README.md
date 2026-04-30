@@ -187,7 +187,8 @@ nodes = {
         arm_stable_pos="0.0,-1.5,3.0,0.07,0.0,0.0",
         grip_stable_pos="0.5",
         arrive_threshold=0.06,
-        err_threshold=0.02,
+        arm_err_threshold=0.02,
+        grip_err_threshold=0.02,
         required=True,
         hidden=False,
         remap_dict={
@@ -266,7 +267,8 @@ nodes = {
         arm_stable_pos="0.0,-1.5,3.0,0.07,0.0,0.0",
         grip_stable_pos="0.5",
         arrive_threshold=0.06,
-        err_threshold=0.02,
+        arm_err_threshold=0.02,
+        grip_err_threshold=0.02,
         required=True,
         hidden=False,
         remap_dict={
@@ -300,7 +302,8 @@ print(config.export())
 | `grip_kp`          | `str`   | `"10.0"`                                          | Gripper stiffness gain                              |
 | `grip_kd`          | `str`   | `"0.5"`                                           | Gripper damping gain                                |
 | `arrive_threshold` | `float` | `0.06`                                           | Joint position threshold (rad) to consider arrived  |
-| `err_threshold`    | `float` | `0.02`                                           | Position error limit for safety (lim_err)           |
+| `arm_err_threshold` | `float` | `0.02`                                           | Arm position error limit for safety (lim_err)       |
+| `grip_err_threshold`| `float` | `0.02`                                           | Gripper position error limit for safety (lim_err)   |
 | `required`         | `bool`  | `True`                                           | Required for launch                                 |
 | `hidden`           | `bool`  | `False`                                          | Hidden node                                         |
 | `remap_dict`       | `dict`  | `None`                                           | Custom remap; defaults to `{robot_source}/*`        |
@@ -402,7 +405,8 @@ nodes:
       GRIP_KP: "10.0"
       GRIP_KD: "0.5"
       ARRIVE_THRESHOLD: "0.06"
-      ERR_THRESHOLD: "0.02"
+      ARM_ERR_THRESHOLD: "0.02"
+      GRIP_ERR_THRESHOLD: "0.02"
 ```
 
 ### MuJoCo simulation (500 Hz)
@@ -468,7 +472,8 @@ nodes:
       GRIP_KP: "10.0"
       GRIP_KD: "0.5"
       ARRIVE_THRESHOLD: "0.06"
-      ERR_THRESHOLD: "0.02"
+      ARM_ERR_THRESHOLD: "0.02"
+      GRIP_ERR_THRESHOLD: "0.02"
 ```
 
 # Message Types (FlatBuffer)
@@ -563,7 +568,8 @@ Schema: [`msgs/msg_robot/arm_ctrl.fbs`](https://github.com/hexfellow/hex_util_ms
 | `GRIP_KP`          | `str`   | `"10.0"`                                          | Gripper stiffness gain                              |
 | `GRIP_KD`          | `str`   | `"0.5"`                                           | Gripper damping gain                                |
 | `ARRIVE_THRESHOLD` | `float` | `0.06`                                           | Joint position threshold (rad) to consider arrived  |
-| `ERR_THRESHOLD`    | `float` | `0.02`                                           | Position error limit for safety (`lim_err`)         |
+| `ARM_ERR_THRESHOLD` | `float` | `0.02`                                           | Arm position error limit for safety (`lim_err`)     |
+| `GRIP_ERR_THRESHOLD`| `float` | `0.02`                                           | Gripper position error limit for safety (`lim_err`) |
 
 # Architecture
 
