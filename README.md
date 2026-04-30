@@ -50,17 +50,17 @@
 ## Architecture diagram
 
 ```
-┌──────────────────────┐   left_arm_state / right_arm_state   ┌──────────────────────────┐
-│   Robot Source       │   left_grip_state / right_grip_state  │  hex-flow-template-      │
-│ (real or MuJoCo)     │ ────────────────────────────────────> │  e3-desktop              │
-│                      │ <──────────────────────────────────── │                          │
-│  ┌──────────────┐    │   left_arm_ctrl / right_arm_ctrl      └──────────────────────────┘
-│  │  Left Arm    │    │   left_grip_ctrl / right_grip_ctrl              ▲
-│  │  (Archer Y6) │    │                                                │ keys
-│  ├──────────────┤    │                                                │
-│  │  Right Arm   │    │                                        ┌───────┴────────┐
-│  │  (Archer Y6) │    │                                        │ teleop_keyboard │
-│  └──────────────┘    │                                        └────────────────┘
+┌──────────────────────┐   left_arm_state / right_arm_state    ┌──────────────────────┐
+│   Robot Source       │   left_grip_state / right_grip_state  │  hex-flow-template-  │
+│ (real or MuJoCo)     │ ────────────────────────────────────> │  e3-desktop          │
+│                      │ <──────────────────────────────────── │                      │
+│  ┌──────────────┐    │   left_arm_ctrl / right_arm_ctrl      └──────────────────────┘
+│  │  Left Arm    │    │   left_grip_ctrl / right_grip_ctrl               ▲
+│  │  (Archer Y6) │    │                                                  │ keys
+│  ├──────────────┤    │                                                  │
+│  │  Right Arm   │    │                                         ┌────────┴────────┐
+│  │  (Archer Y6) │    │                                         │ teleop_keyboard │
+│  └──────────────┘    │                                         └─────────────────┘
 └──────────────────────┘
 ```
 
