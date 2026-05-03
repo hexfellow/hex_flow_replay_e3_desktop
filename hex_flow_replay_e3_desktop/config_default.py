@@ -8,15 +8,15 @@
 
 from hex_flow_core import NodeConfig
 
-_BUILD_CMD = "pip install hex_flow_template_e3_desktop"
+_BUILD_CMD = "pip install hex_flow_replay_e3_desktop"
 
 # ──────────────────────────────────────────────────────────────
 #  Comp Control
 # ──────────────────────────────────────────────────────────────
 
 
-def default_template_e3_desktop_node(
-    name: str = "template_e3_desktop",
+def default_replay_e3_desktop_node(
+    name: str = "replay_e3_desktop",
     rate_hz: float = 500.0,
     arm_stable_pos: str = "0.0,-1.5,3.0,0.07,0.0,0.0",
     grip_stable_pos: str = "0.5",
@@ -27,6 +27,8 @@ def default_template_e3_desktop_node(
     arrive_threshold: float = 0.06,
     arm_err_threshold: float = 0.02,
     grip_err_threshold: float = 0.02,
+    mcap_path: str = "",
+    loop_count: int = 1,
     required: bool = True,
     hidden: bool = False,
     remap_dict: dict[str, str] | None = None,
@@ -44,12 +46,13 @@ def default_template_e3_desktop_node(
             "left_grip_ctrl": f"{robot_source}/left_grip_ctrl",
             "right_grip_ctrl": f"{robot_source}/right_grip_ctrl",
             "keys": f"{keys_source}/teleop_keyboard",
+            "record": f"{name}/record",
         }
 
     return NodeConfig(
         name=name,
         build_cmd=_BUILD_CMD,
-        run_cmd="hex-flow-template-e3-desktop",
+        run_cmd="hex-flow-replay-e3-desktop",
         required=required,
         hidden=hidden,
         remap_dict=remap_dict,
@@ -64,5 +67,7 @@ def default_template_e3_desktop_node(
             "ARM_KD": arm_kd,
             "GRIP_KP": grip_kp,
             "GRIP_KD": grip_kd,
+            "MCAP_PATH": mcap_path,
+            "LOOP_COUNT": str(loop_count),
         },
     )

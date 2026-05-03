@@ -23,9 +23,9 @@ if [ ! -d .venv ]; then
 fi
 source .venv/bin/activate
 
-# Install hex_flow_template_e3_desktop
+# Install hex_flow_replay_e3_desktop
 rm -rf dist build *.egg-info
-uv pip uninstall hex_flow_template_e3_desktop || true
+uv pip uninstall hex_flow_replay_e3_desktop || true
 uv pip install -e .
 
 cd $CUR_DIR

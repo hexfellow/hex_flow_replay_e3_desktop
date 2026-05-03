@@ -6,8 +6,14 @@
 # Date  : 2026-04-28
 ################################################################
 
-from .config_default import default_template_e3_desktop_node
+from .replay_e3_desktop import HexFlowReplayE3Desktop
 
-__all__ = [
-    "default_template_e3_desktop_node",
-]
+
+def main():
+    replay = HexFlowReplayE3Desktop()
+    replay.start()
+    replay.run()
+
+
+if __name__ == "__main__":
+    main()

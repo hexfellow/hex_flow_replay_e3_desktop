@@ -1,15 +1,15 @@
-<h1 align="center">HEX FLOW TEMPLATE E3 DESKTOP</h1>
+<h1 align="center">HEX FLOW REPLAY E3 DESKTOP</h1>
 
 <p align="center">
-    <a href="https://github.com/hexfellow/hex_flow_template_e3_desktop/stargazers">
-        <img src="https://img.shields.io/github/stars/hexfellow/hex_flow_template_e3_desktop?style=flat-square&logo=github" />
+    <a href="https://github.com/hexfellow/hex_flow_replay_e3_desktop/stargazers">
+        <img src="https://img.shields.io/github/stars/hexfellow/hex_flow_replay_e3_desktop?style=flat-square&logo=github" />
     </a>
-    <a href="https://github.com/hexfellow/hex_flow_template_e3_desktop/forks">
-        <img src="https://img.shields.io/github/forks/hexfellow/hex_flow_template_e3_desktop?style=flat-square&logo=github" />
+    <a href="https://github.com/hexfellow/hex_flow_replay_e3_desktop/forks">
+        <img src="https://img.shields.io/github/forks/hexfellow/hex_flow_replay_e3_desktop?style=flat-square&logo=github" />
     </a>
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="https://github.com/hexfellow/hex_flow_template_e3_desktop/issues">
-        <img src="https://img.shields.io/github/issues/hexfellow/hex_flow_template_e3_desktop?style=flat-square&logo=github" />
+    <a href="https://github.com/hexfellow/hex_flow_replay_e3_desktop/issues">
+        <img src="https://img.shields.io/github/issues/hexfellow/hex_flow_replay_e3_desktop?style=flat-square&logo=github" />
     </a>
 </p>
 
@@ -17,54 +17,59 @@
 
 # 📖 Overview
 
-## What is `hex_flow_template_e3_desktop`
+## What is `hex_flow_replay_e3_desktop`
 
-`hex_flow_template_e3_desktop` provides a ready-to-use E3 Desktop control template built on the hex-flow framework. It orchestrates the dual-arm E3 Desktop robot system — consisting of two Archer Y6 arms with grippers — through a three-phase lifecycle (**init**, **work**, and **exit**). The template seamlessly integrates with real or simulated E3 Desktop hardware alongside keyboard teleoperation and camera nodes.
+`hex_flow_replay_e3_desktop` is a hex-flow node that replays recorded dual-arm E3 Desktop trajectories from MCAP bag files. It orchestrates both left and right Archer Y6 arms through a four-phase lifecycle — **init**, **prep**, **run**, and **exit** — enabling deterministic replay of pre-recorded dual-arm manipulation episodes on either real or simulated E3 Desktop hardware.
 
 ### Core lifecycle
 
-1. **Init phase** — On startup, the template commands both arms and grippers (left and right) to move to a configurable stable position, waiting until both arms arrive within a configurable error threshold.
-2. **Work phase** — Once both arms are at the stable position, the template switches to **compensation mode**, publishing zero-torque compensation commands every control cycle for each arm, keeping both arms in a gravity-compensated state ready for dual-arm manipulation.
-3. **Exit phase** — On shutdown (triggered by pressing the `q` key or `Ctrl+C`), the template commands both arms back to the stable position before exiting cleanly.
+1. **Init phase** — On startup, the node commands both arms and grippers to move to a configurable stable position, waiting until both arms arrive within a configurable error threshold.
+2. **Work phase** — Once both arms are at the stable position, the node transitions into the main work loop:
+   - **Load**: Parses the MCAP bag file specified by `MCAP_PATH`, extracting `left_arm_state`, `right_arm_state`, `left_grip_state`, and `right_grip_state` time-series data with nanosecond timestamps.
+   - **Prep**: Drives both arms to their respective bag start positions and, once both arms stabilize, publishes a `record=True` signal to trigger external data recording nodes (e.g., `hex_flow_node_data`).
+   - **Run**: Replays the full dual-arm trajectory by time-interpolating arm and gripper positions at each control cycle, publishing compensation-mode commands for both arms simultaneously. When the bag end is reached, a `record=False` signal is published to stop recording.
+3. **Exit phase** — On shutdown (triggered by pressing the `q` key or `Ctrl+C`), the node sends `record=False`, then commands both arms back to the stable position before exiting cleanly.
 
 ## What problem it solves
 
-- **Out-of-the-box dual-arm control flow**: Provides a standard lifecycle (init → work → exit) for E3 Desktop, eliminating the need to write boilerplate dual-arm state machine logic.
-- **Graceful shutdown**: Handles both keyboard-triggered (`q` key) and signal-based (`Ctrl+C`) shutdown, automatically returning both arms to a safe stable position.
-- **Flexible deployment**: Supports both real robot hardware (via `hex_flow_node_robot`) and MuJoCo simulation (via `hex_flow_node_mujoco`) — just swap the robot source with zero code changes to the template.
-- **Keyboard teleop integration**: Subscribes to keyboard events via `hex_flow_node_teleop`, enabling a `q`-key shutdown mechanism.
-- **Camera integration**: Ready for head-mounted (Realsense) and left/right USB camera nodes from `hex_flow_node_camera`.
+- **Deterministic dual-arm replay**: Replay pre-recorded left and right arm/gripper trajectories from MCAP bag files with time interpolation, enabling reproducible experiments and policy evaluations.
+- **Data collection integration**: Publishes `record` (bool) topic to synchronize with `hex_flow_node_data` nodes, automating the recording of replayed dual-arm episodes.
+- **Looping support**: Configure `LOOP_COUNT` to replay the same trajectory multiple times, useful for repeated trials or robustness testing.
+- **Out-of-the-box control flow**: Provides a standard lifecycle (init → prep → run → exit) for dual-arm replay with graceful shutdown, eliminating boilerplate state machine logic.
+- **Flexible deployment**: Supports both real robot hardware (via `hex_flow_node_robot`) and MuJoCo simulation (via `hex_flow_node_mujoco`) — just swap the robot source with zero code changes.
 
 ## Target users
 
-- Engineers deploying dual-arm E3 Desktop robot systems in automated workspaces who need a quick-start control loop.
-- Developers and researchers prototyping dual-arm manipulation on E3 Desktop and transitioning from simulation to real hardware.
-- Users of the hex-flow framework looking for a reference implementation of a dual-arm robot control node.
+- Data collection engineers replaying dual-arm robot demonstration trajectories for imitation learning datasets.
+- Researchers evaluating bimanual manipulation policies by replaying identical dual-arm trajectories across multiple trials.
+- Developers using the hex-flow framework looking for a reference implementation of a bag-based dual-arm replay node.
 
 ## Nodes
 
-| Node                              | Description                              | Publishes                                                         | Subscribes                                                              |
-| --------------------------------- | ---------------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `hex-flow-template-e3-desktop`    | E3 Desktop dual-arm control template     | `left_arm_ctrl`, `right_arm_ctrl`, `left_grip_ctrl`, `right_grip_ctrl` | `left_arm_state`, `right_arm_state`, `left_grip_state`, `right_grip_state`, `keys` |
+| Node                               | Description                              | Publishes                                                         | Subscribes                                                                                |
+| ---------------------------------- | ---------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `hex-flow-replay-e3-desktop`       | E3 Desktop dual-arm replay node          | `left_arm_ctrl`, `right_arm_ctrl`, `left_grip_ctrl`, `right_grip_ctrl`, `record` | `left_arm_state`, `right_arm_state`, `left_grip_state`, `right_grip_state`, `keys` |
+
+> The optional `data_record` nodes (from `hex_flow_node_data`) can subscribe to each arm's state topics and `record` to capture each replayed episode independently.
 
 ## Architecture diagram
 
 ```
-┌──────────────────────┐   left_arm_state / right_arm_state    ┌──────────────────────┐
-│   Robot Source       │   left_grip_state / right_grip_state  │  hex-flow-template-  │
-│ (real or MuJoCo)     │ ────────────────────────────────────> │  e3-desktop          │
-│                      │ <──────────────────────────────────── │                      │
-│  ┌──────────────┐    │   left_arm_ctrl / right_arm_ctrl      └──────────────────────┘
-│  │  Left Arm    │    │   left_grip_ctrl / right_grip_ctrl               ▲
-│  │  (Archer Y6) │    │                                                  │ keys
-│  ├──────────────┤    │                                                  │
-│  │  Right Arm   │    │                                         ┌────────┴────────┐
-│  │  (Archer Y6) │    │                                         │ teleop_keyboard │
-│  └──────────────┘    │                                         └─────────────────┘
-└──────────────────────┘
+┌─────────────────┐     left/right arm_state        ┌────────────────────────┐
+│  Robot Source   │     left/right grip_state       │  hex-flow-replay-      │
+│ (real or MuJoCo)│ ──────────────────────────────> │  e3-desktop            │
+│                 │ <────────────────────────────── │                        │
+└─────────────────┘     left/right arm_ctrl         └──────┬──────────┬──────┘
+                         left/right grip_ctrl              │ record   │ keys
+                                                           │          │
+                                            ┌──────────────▼─────┐ ┌──▼─────────┐
+                                            │  data_record       │ │ teleop_kb  │
+                                            │  (optional,        │ │            │
+                                            │   both arms)       │ │            │
+                                            └────────────────────┘ └────────────┘
 ```
 
-The template sits between a robot source (either `hex-flow-robot-archer-y6` for real hardware or `hex-flow-mujoco-e3-desktop` for MuJoCo simulation) and a teleop keyboard node. It subscribes to robot state topics for both arms and keyboard events, and publishes control commands back to the robot source for both arms.
+The replay node sits between a robot source (either real dual Archer Y6 drivers or MuJoCo E3 Desktop simulation) and a teleop keyboard node. It subscribes to robot state topics for both arms and keyboard events, and publishes control commands back to the robot source for both arms, along with a `record` signal to trigger external data recording.
 
 # 📦 Installation
 
@@ -76,7 +81,9 @@ The template sits between a robot source (either `hex-flow-robot-archer-y6` for 
   - `hex_flow_node_robot` >= 0.0.0, < 0.1.0
   - `hex_flow_node_teleop` >= 0.0.0, < 0.1.0
   - `hex_flow_node_mujoco` >= 0.0.0, < 0.1.0
-  - `hex_flow_node_camera` >= 0.0.0, < 0.1.0
+  - `hex_flow_node_data` >= 0.0.0, < 0.1.0
+  - `hex_util_data` >= 0.0.0, < 0.1.0
+  - `hex_util_robot` >= 0.0.0, < 0.1.0
 
 ## Install `hex-flow-cli`
 
@@ -96,9 +103,9 @@ curl -fsSL https://raw.githubusercontent.com/hexfellow/hex-flow/main/install.sh 
 
 For other systems, please install `zenohd` yourself, then run the [install script](https://raw.githubusercontent.com/hexfellow/hex-flow/main/install.sh).
 
-## Install `hex-flow-template-e3-desktop` from source
+## Install `hex-flow-replay-e3-desktop` from source
 
-We provide a [venv.sh](venv.sh) script to create a virtual environment with all dependencies installed. However, you need to install uv first. For uv installation, please refer to `uv` official [installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+We provide a [venv.sh](venv.sh) script to create a virtual environment with all dependencies installed. However, you need to install `uv` first. For `uv` installation, please refer to the `uv` official [installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -107,30 +114,35 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Then you can use [venv.sh](venv.sh) to create a virtual environment with all dependencies installed:
 
 ```bash
-git clone https://github.com/hexfellow/hex_flow_template_e3_desktop.git
-cd hex_flow_template_e3_desktop
+git clone https://github.com/hexfellow/hex_flow_replay_e3_desktop.git
+cd hex_flow_replay_e3_desktop
 ./venv.sh
 ```
 
 # 📑 Python Config API
 
-The package provides the `default_template_e3_desktop_node` helper function that returns a `NodeConfig` object for easy integration into your `LaunchConfig`.
+The package provides the `default_replay_e3_desktop_node` helper function that returns a `NodeConfig` object for easy integration into your `LaunchConfig`.
 
 ## Real robot launch
 
 ```python
+import os
 from hex_flow_core import LaunchConfig
 from hex_flow_node_robot import default_robot_archer_y6_node
 from hex_flow_node_teleop import default_teleop_keyboard_node
-from hex_flow_node_camera import default_cam_berxel_node, default_cam_usb_node
-from hex_flow_template_e3_desktop import default_template_e3_desktop_node
+from hex_flow_node_data import default_data_record_node
+from hex_flow_replay_e3_desktop import default_replay_e3_desktop_node
 
 config = LaunchConfig(
     local_only=True,
     enable_tui=True,
     log_to_file=True,
-    save_path="/tmp/real_template.yml",
+    save_path="/tmp/real_replay.yml",
 )
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RECORD_PATH = f"{SCRIPT_DIR}/record_data"
+REPLAY_DIR = f"{SCRIPT_DIR}/replay_data"
 
 nodes = {
     "left_archer_y6":
@@ -180,15 +192,17 @@ nodes = {
         hidden=True,
         remap_dict={"teleop_keyboard": "teleop_keyboard/teleop_keyboard"},
     ),
-    "template_e3_desktop":
-    default_template_e3_desktop_node(
-        name="template_e3_desktop",
+    "replay_e3_desktop":
+    default_replay_e3_desktop_node(
+        name="replay_e3_desktop",
         rate_hz=500.0,
         arm_stable_pos="0.0,-1.5,3.0,0.07,0.0,0.0",
         grip_stable_pos="0.5",
         arrive_threshold=0.06,
-        arm_err_threshold=0.02,
+        arm_err_threshold=0.04,
         grip_err_threshold=0.02,
+        mcap_path=f"{REPLAY_DIR}/episode_000001.mcap",
+        loop_count=1,
         required=True,
         hidden=False,
         remap_dict={
@@ -201,6 +215,23 @@ nodes = {
             "left_grip_ctrl": "left_archer_y6/grip_ctrl",
             "right_grip_ctrl": "right_archer_y6/grip_ctrl",
             "keys": "teleop_keyboard/teleop_keyboard",
+            "record": "replay_e3_desktop/record",
+        },
+    ),
+    "data_record_left":
+    default_data_record_node(
+        name="data_record_left",
+        record_path=RECORD_PATH,
+        foxglove_host="127.0.0.1",
+        foxglove_port=8765,
+        start_cnt=0,
+        required=False,
+        remap_dict={
+            "left_arm_state": "left_archer_y6/arm_state",
+            "left_grip_state": "left_archer_y6/grip_state",
+            "right_arm_state": "right_archer_y6/arm_state",
+            "right_grip_state": "right_archer_y6/grip_state",
+            "record": "replay_e3_desktop/record",
         },
     ),
 }
@@ -212,17 +243,23 @@ print(config.export())
 ## MuJoCo simulation launch
 
 ```python
+import os
 from hex_flow_core import LaunchConfig
 from hex_flow_node_mujoco import default_mujoco_e3_desktop_node
 from hex_flow_node_teleop import default_teleop_keyboard_node
-from hex_flow_template_e3_desktop import default_template_e3_desktop_node
+from hex_flow_node_data import default_data_record_node
+from hex_flow_replay_e3_desktop import default_replay_e3_desktop_node
 
 config = LaunchConfig(
     local_only=True,
     enable_tui=True,
     log_to_file=True,
-    save_path="/tmp/sim_template.yml",
+    save_path="/tmp/sim_replay.yml",
 )
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RECORD_PATH = f"{SCRIPT_DIR}/record_data"
+REPLAY_DIR = f"{SCRIPT_DIR}/replay_data"
 
 nodes = {
     "mujoco_e3_desktop":
@@ -260,15 +297,17 @@ nodes = {
         hidden=True,
         remap_dict={"teleop_keyboard": "teleop_keyboard/teleop_keyboard"},
     ),
-    "template_e3_desktop":
-    default_template_e3_desktop_node(
-        name="template_e3_desktop",
+    "replay_e3_desktop":
+    default_replay_e3_desktop_node(
+        name="replay_e3_desktop",
         rate_hz=500.0,
         arm_stable_pos="0.0,-1.5,3.0,0.07,0.0,0.0",
         grip_stable_pos="0.5",
         arrive_threshold=0.06,
-        arm_err_threshold=0.02,
+        arm_err_threshold=0.04,
         grip_err_threshold=0.02,
+        mcap_path=f"{REPLAY_DIR}/episode_000001.mcap",
+        loop_count=5,
         required=True,
         hidden=False,
         remap_dict={
@@ -281,6 +320,23 @@ nodes = {
             "left_grip_ctrl": "mujoco_e3_desktop/left_grip_ctrl",
             "right_grip_ctrl": "mujoco_e3_desktop/right_grip_ctrl",
             "keys": "teleop_keyboard/teleop_keyboard",
+            "record": "replay_e3_desktop/record",
+        },
+    ),
+    "data_record":
+    default_data_record_node(
+        name="data_record_left",
+        record_path=RECORD_PATH,
+        foxglove_host="127.0.0.1",
+        foxglove_port=8765,
+        start_cnt=0,
+        required=False,
+        remap_dict={
+            "left_arm_state": "mujoco_e3_desktop/left_arm_state",
+            "left_grip_state": "mujoco_e3_desktop/left_grip_state",
+            "right_arm_state": "mujoco_e3_desktop/right_arm_state",
+            "right_grip_state": "mujoco_e3_desktop/right_grip_state",
+            "record": "replay_e3_desktop/record",
         },
     ),
 }
@@ -289,26 +345,28 @@ config.set_nodes(nodes)
 print(config.export())
 ```
 
-### `default_template_e3_desktop_node`
+### `default_replay_e3_desktop_node`
 
-| Parameter          | Type    | Default                                          | Description                                         |
-| ------------------ | ------- | ------------------------------------------------ | --------------------------------------------------- |
-| `name`             | `str`   | `"template_e3_desktop"`                          | Node name and remap prefix                          |
-| `rate_hz`          | `float` | `500.0`                                          | Control loop rate in Hz                             |
-| `arm_stable_pos`   | `str`   | `"0.0,-1.5,3.0,0.07,0.0,0.0"`                   | Arm stable joint position (6-DOF comma-separated, applied to both arms) |
-| `grip_stable_pos`  | `str`   | `"0.5"`                                          | Gripper stable position (applied to both grippers)  |
-| `arm_kp`           | `str`   | `"200.0,200.0,250.0,150.0,100.0,100.0"`          | Arm stiffness gains (6-DOF comma-separated)         |
-| `arm_kd`           | `str`   | `"5.0,5.0,5.0,5.0,2.0,2.0"`                     | Arm damping gains (6-DOF comma-separated)           |
-| `grip_kp`          | `str`   | `"10.0"`                                          | Gripper stiffness gain                              |
-| `grip_kd`          | `str`   | `"0.5"`                                           | Gripper damping gain                                |
-| `arrive_threshold` | `float` | `0.06`                                           | Joint position threshold (rad) to consider arrived  |
-| `arm_err_threshold` | `float` | `0.02`                                           | Arm position error limit for safety (lim_err)       |
-| `grip_err_threshold`| `float` | `0.02`                                           | Gripper position error limit for safety (lim_err)   |
-| `required`         | `bool`  | `True`                                           | Required for launch                                 |
-| `hidden`           | `bool`  | `False`                                          | Hidden node                                         |
-| `remap_dict`       | `dict`  | `None`                                           | Custom remap; defaults to `{robot_source}/*`        |
-| `robot_source`     | `str`   | `"mujoco_e3_desktop"`                            | Robot node to subscribe/publish to                  |
-| `keys_source`      | `str`   | `"teleop_keyboard"`                              | Teleop keyboard node to subscribe to                |
+| Parameter            | Type    | Default                                          | Description                                         |
+| -------------------- | ------- | ------------------------------------------------ | --------------------------------------------------- |
+| `name`               | `str`   | `"replay_e3_desktop"`                            | Node name and remap prefix                          |
+| `rate_hz`            | `float` | `500.0`                                          | Control loop rate in Hz                             |
+| `arm_stable_pos`     | `str`   | `"0.0,-1.5,3.0,0.07,0.0,0.0"`                   | Arm stable joint position (6-DOF comma-separated, applied to both arms) |
+| `grip_stable_pos`    | `str`   | `"0.5"`                                          | Gripper stable position (applied to both grippers)  |
+| `arm_kp`             | `str`   | `"200.0,200.0,250.0,150.0,100.0,100.0"`          | Arm stiffness gains (6-DOF comma-separated)         |
+| `arm_kd`             | `str`   | `"5.0,5.0,5.0,5.0,2.0,2.0"`                     | Arm damping gains (6-DOF comma-separated)           |
+| `grip_kp`            | `str`   | `"10.0"`                                          | Gripper stiffness gain                              |
+| `grip_kd`            | `str`   | `"0.5"`                                           | Gripper damping gain                                |
+| `arrive_threshold`   | `float` | `0.06`                                           | Joint position threshold (rad) to consider arrived  |
+| `arm_err_threshold`  | `float` | `0.02`                                           | Arm position error limit for safety (`lim_err`)     |
+| `grip_err_threshold` | `float` | `0.02`                                           | Gripper position error limit for safety (`lim_err`) |
+| `mcap_path`          | `str`   | `""`                                             | Path to the MCAP bag file to replay                 |
+| `loop_count`         | `int`   | `1`                                              | Number of times to replay the trajectory            |
+| `required`           | `bool`  | `True`                                           | Required for launch                                 |
+| `hidden`             | `bool`  | `False`                                          | Hidden node                                         |
+| `remap_dict`         | `dict`  | `None`                                           | Custom remap; defaults to `{robot_source}/*`        |
+| `robot_source`       | `str`   | `"mujoco_e3_desktop"`                            | Robot node to subscribe/publish to                  |
+| `keys_source`        | `str`   | `"teleop_keyboard"`                              | Teleop keyboard node to subscribe to                |
 
 # 💡 Examples
 
@@ -317,15 +375,15 @@ Ready-to-run config scripts are provided in the [`example/`](example/) directory
 ### Real robot
 
 ```bash
-# 500 Hz control loop with real E3 Desktop hardware (dual Archer Y6 arms)
-hexflow run example/real_template.launch.py
+# 500 Hz dual-arm replay loop with real E3 Desktop hardware
+hexflow run example/real_replay.launch.py
 ```
 
 ### MuJoCo simulation
 
 ```bash
-# 500 Hz control loop with MuJoCo simulated E3 Desktop
-hexflow run example/sim_template.launch.py
+# 500 Hz dual-arm replay loop with MuJoCo simulated E3 Desktop
+hexflow run example/sim_replay.launch.py
 ```
 
 # YAML Examples
@@ -382,9 +440,9 @@ nodes:
     env:
       DEVICE_PATH: ""
 
-  - name: template_e3_desktop
-    build: pip install hex_flow_template_e3_desktop
-    run: hex-flow-template-e3-desktop
+  - name: replay_e3_desktop
+    build: pip install hex_flow_replay_e3_desktop
+    run: hex-flow-replay-e3-desktop
     required: true
     remap:
       left_arm_state: left_archer_y6/arm_state
@@ -396,6 +454,7 @@ nodes:
       left_grip_ctrl: left_archer_y6/grip_ctrl
       right_grip_ctrl: right_archer_y6/grip_ctrl
       keys: teleop_keyboard/teleop_keyboard
+      record: replay_e3_desktop/record
     env:
       RATE_HZ: "500"
       ARM_STABLE_POS: "0.0,-1.5,3.0,0.07,0.0,0.0"
@@ -405,8 +464,38 @@ nodes:
       GRIP_KP: "10.0"
       GRIP_KD: "0.5"
       ARRIVE_THRESHOLD: "0.06"
-      ARM_ERR_THRESHOLD: "0.02"
+      ARM_ERR_THRESHOLD: "0.04"
       GRIP_ERR_THRESHOLD: "0.02"
+      MCAP_PATH: "/path/to/replay_data/episode_000001.mcap"
+      LOOP_COUNT: "1"
+
+  - name: data_record_left
+    build: pip install hex_flow_node_data
+    run: hex-flow-data-record
+    required: false
+    remap:
+      arm_state: left_archer_y6/arm_state
+      grip_state: left_archer_y6/grip_state
+      record: replay_e3_desktop/record
+    env:
+      RECORD_PATH: "/path/to/record_data"
+      FOXGLOVE_HOST: "127.0.0.1"
+      FOXGLOVE_PORT: "8765"
+      START_CNT: "0"
+
+  - name: data_record_right
+    build: pip install hex_flow_node_data
+    run: hex-flow-data-record
+    required: false
+    remap:
+      arm_state: right_archer_y6/arm_state
+      grip_state: right_archer_y6/grip_state
+      record: replay_e3_desktop/record
+    env:
+      RECORD_PATH: "/path/to/record_data"
+      FOXGLOVE_HOST: "127.0.0.1"
+      FOXGLOVE_PORT: "8765"
+      START_CNT: "0"
 ```
 
 ### MuJoCo simulation (500 Hz)
@@ -449,9 +538,9 @@ nodes:
     env:
       DEVICE_PATH: ""
 
-  - name: template_e3_desktop
-    build: pip install hex_flow_template_e3_desktop
-    run: hex-flow-template-e3-desktop
+  - name: replay_e3_desktop
+    build: pip install hex_flow_replay_e3_desktop
+    run: hex-flow-replay-e3-desktop
     required: true
     remap:
       left_arm_state: mujoco_e3_desktop/left_arm_state
@@ -463,6 +552,7 @@ nodes:
       left_grip_ctrl: mujoco_e3_desktop/left_grip_ctrl
       right_grip_ctrl: mujoco_e3_desktop/right_grip_ctrl
       keys: teleop_keyboard/teleop_keyboard
+      record: replay_e3_desktop/record
     env:
       RATE_HZ: "500"
       ARM_STABLE_POS: "0.0,-1.5,3.0,0.07,0.0,0.0"
@@ -472,13 +562,43 @@ nodes:
       GRIP_KP: "10.0"
       GRIP_KD: "0.5"
       ARRIVE_THRESHOLD: "0.06"
-      ARM_ERR_THRESHOLD: "0.02"
+      ARM_ERR_THRESHOLD: "0.04"
       GRIP_ERR_THRESHOLD: "0.02"
+      MCAP_PATH: "/path/to/replay_data/episode_000001.mcap"
+      LOOP_COUNT: "1"
+
+  - name: data_record_left
+    build: pip install hex_flow_node_data
+    run: hex-flow-data-record
+    required: false
+    remap:
+      arm_state: mujoco_e3_desktop/left_arm_state
+      grip_state: mujoco_e3_desktop/left_grip_state
+      record: replay_e3_desktop/record
+    env:
+      RECORD_PATH: "/path/to/record_data"
+      FOXGLOVE_HOST: "127.0.0.1"
+      FOXGLOVE_PORT: "8765"
+      START_CNT: "0"
+
+  - name: data_record_right
+    build: pip install hex_flow_node_data
+    run: hex-flow-data-record
+    required: false
+    remap:
+      arm_state: mujoco_e3_desktop/right_arm_state
+      grip_state: mujoco_e3_desktop/right_grip_state
+      record: replay_e3_desktop/record
+    env:
+      RECORD_PATH: "/path/to/record_data"
+      FOXGLOVE_HOST: "127.0.0.1"
+      FOXGLOVE_PORT: "8765"
+      START_CNT: "0"
 ```
 
 # Message Types (FlatBuffer)
 
-This template publishes and subscribes to the same FlatBuffer message types as the Archer Y6 robot driver from `hex_flow_node_robot`. All topics use FlatBuffer messages from `hex_util_msg.msg_robot`.
+This node publishes and subscribes to FlatBuffer message types. All robot topics use FlatBuffer messages from `hex_util_msg.msg_robot`.
 
 Each arm (left and right) has its own dedicated topic channels.
 
@@ -525,7 +645,7 @@ Each arm (left and right) has its own dedicated topic channels.
 | Field       | Type      | Description                                    |
 | ----------- | --------- | ---------------------------------------------- |
 | `ts_ns`     | `int64`   | Timestamp in nanoseconds                       |
-| `ctrl_mode` | `uint8`   | Control mode enum (`pos` during init/exit, `comp` during work) |
+| `ctrl_mode` | `uint8`   | Control mode enum (`pos` during init/exit/prep, `comp` during run) |
 | `jnt_pos`   | `float64` | Target joint positions                         |
 | `jnt_vel`   | `float64` | Target joint velocities                        |
 | `mit_kp`    | `float64` | Stiffness gains                                |
@@ -537,14 +657,21 @@ Each arm (left and right) has its own dedicated topic channels.
 | Field       | Type      | Description                                    |
 | ----------- | --------- | ---------------------------------------------- |
 | `ts_ns`     | `int64`   | Timestamp in nanoseconds                       |
-| `ctrl_mode` | `uint8`   | Control mode enum (`pos` during init/exit, `comp` during work) |
+| `ctrl_mode` | `uint8`   | Control mode enum (`pos` during init/exit/prep, `comp` during run) |
 | `jnt_pos`   | `float64` | Target gripper position                        |
 | `jnt_vel`   | `float64` | Target gripper velocity                        |
 | `mit_kp`    | `float64` | Stiffness gains                                |
 | `mit_kd`    | `float64` | Damping gains                                  |
 | `lim_err`   | `float64` | Position error limit for safety                |
 
-Schema: [`msgs/msg_robot/arm_ctrl.fbs`](https://github.com/hexfellow/hex_util_msg/blob/main/msgs/msg_robot/arm_ctrl.fbs) | [`msgs/msg_robot/grip_ctrl.fbs`](https://github.com/hexfellow/hex_util_msg/blob/main/msgs/msg_robot/grip_ctrl.fbs)
+### `record` — `HexBool`
+
+| Field   | Type      | Description                                    |
+| ------- | --------- | ---------------------------------------------- |
+| `ts_ns` | `int64`   | Timestamp in nanoseconds                       |
+| `data`  | `bool`    | Record signal (`true` to start, `false` to stop) |
+
+Schema: [`msgs/msg_robot/arm_ctrl.fbs`](https://github.com/hexfellow/hex_util_msg/blob/main/msgs/msg_robot/arm_ctrl.fbs) | [`msgs/msg_robot/grip_ctrl.fbs`](https://github.com/hexfellow/hex_util_msg/blob/main/msgs/msg_robot/grip_ctrl.fbs) | [`msgs/msg_basic/bool.fbs`](https://github.com/hexfellow/hex_util_msg/blob/main/msgs/msg_basic/bool.fbs)
 
 # Environment Variables
 
@@ -556,36 +683,43 @@ Schema: [`msgs/msg_robot/arm_ctrl.fbs`](https://github.com/hexfellow/hex_util_ms
 | `HEX_FLOW_REMAP`     | `str` | `{}`            | JSON dict for topic remapping (handled by `hex_flow_core`) |
 | `RUST_LOG`           | `str` | `info`          | Log level for `envlog`                                     |
 
-## Template Node (`hex-flow-template-e3-desktop`)
+## Replay Node (`hex-flow-replay-e3-desktop`)
 
-| Variable           | Type    | Default                                          | Description                                         |
-| ------------------ | ------- | ------------------------------------------------ | --------------------------------------------------- |
-| `RATE_HZ`          | `float` | `500.0`                                          | Control loop rate in Hz                             |
-| `ARM_STABLE_POS`   | `str`   | `"0.0,-1.5,3.0,0.07,0.0,0.0"`                   | Arm stable joint position (6-DOF comma-separated, applied to both arms) |
-| `GRIP_STABLE_POS`  | `str`   | `"0.5"`                                          | Gripper stable position (applied to both grippers)  |
-| `ARM_KP`           | `str`   | `"200.0,200.0,250.0,150.0,100.0,100.0"`          | Arm stiffness gains (6-DOF comma-separated)         |
-| `ARM_KD`           | `str`   | `"5.0,5.0,5.0,5.0,2.0,2.0"`                     | Arm damping gains (6-DOF comma-separated)           |
-| `GRIP_KP`          | `str`   | `"10.0"`                                          | Gripper stiffness gain                              |
-| `GRIP_KD`          | `str`   | `"0.5"`                                           | Gripper damping gain                                |
-| `ARRIVE_THRESHOLD` | `float` | `0.06`                                           | Joint position threshold (rad) to consider arrived  |
-| `ARM_ERR_THRESHOLD` | `float` | `0.02`                                           | Arm position error limit for safety (`lim_err`)     |
-| `GRIP_ERR_THRESHOLD`| `float` | `0.02`                                           | Gripper position error limit for safety (`lim_err`) |
+| Variable             | Type    | Default                                          | Description                                         |
+| -------------------- | ------- | ------------------------------------------------ | --------------------------------------------------- |
+| `RATE_HZ`            | `float` | `10.0`                                           | Control loop rate in Hz                             |
+| `ARM_STABLE_POS`     | `str`   | `"0.0,-1.5,3.0,0.07,0.0,0.0"`                   | Arm stable joint position (6-DOF comma-separated, applied to both arms) |
+| `GRIP_STABLE_POS`    | `str`   | `"0.5"`                                          | Gripper stable position (applied to both grippers)  |
+| `ARM_KP`             | `str`   | `"200.0,200.0,250.0,150.0,100.0,100.0"`          | Arm stiffness gains (6-DOF comma-separated)         |
+| `ARM_KD`             | `str`   | `"5.0,5.0,5.0,5.0,2.0,2.0"`                     | Arm damping gains (6-DOF comma-separated)           |
+| `GRIP_KP`            | `str`   | `"10.0"`                                          | Gripper stiffness gain                              |
+| `GRIP_KD`            | `str`   | `"0.5"`                                           | Gripper damping gain                                |
+| `ARRIVE_THRESHOLD`   | `float` | `0.06`                                           | Joint position threshold (rad) to consider arrived  |
+| `ARM_ERR_THRESHOLD`  | `float` | `0.02`                                           | Arm position error limit for safety (`lim_err`)     |
+| `GRIP_ERR_THRESHOLD` | `float` | `0.02`                                           | Gripper position error limit for safety (`lim_err`) |
+| `MCAP_PATH`          | `str`   | *required*                                       | Path to the MCAP bag file to replay                 |
+| `LOOP_COUNT`         | `int`   | `1`                                              | Number of times to replay the trajectory            |
+
+> **Note**: When `MCAP_PATH` is not set or empty, the node skips bag loading and uses zero-vector trajectories. This is useful for testing the control flow without an actual bag file.
 
 # Architecture
 
-The template node implements a three-phase lifecycle for dual-arm control:
+The replay node implements a four-phase lifecycle with integrated dual-arm bag replay:
 
-1. **Parameter construction** — reads environment variables and configures the template parameters: control rate, stable positions, PID gains, and arrival/error thresholds.
+1. **Parameter construction** — reads environment variables and configures the node parameters: control rate, stable positions, PID gains, arrival/error thresholds, MCAP path, and loop count.
 
-2. **Subscription setup** — subscribes to `left_arm_state`, `right_arm_state`, `left_grip_state`, `right_grip_state` (from the robot source), and `keys` (from the teleop keyboard node). It publishes `left_arm_ctrl`, `right_arm_ctrl`, `left_grip_ctrl`, and `right_grip_ctrl` commands back to the robot source.
+2. **Subscription setup** — subscribes to `left_arm_state`, `right_arm_state`, `left_grip_state`, `right_grip_state` (from the robot source), and `keys` (from the teleop keyboard node). It publishes `left_arm_ctrl`, `right_arm_ctrl`, `left_grip_ctrl`, `right_grip_ctrl`, and `record` topics.
 
-3. **Init phase** — On `start()`, a teleop monitor thread begins polling the `keys` topic at 100 Hz. The main loop then enters the init phase, publishing position-mode (`HexArmCtrlMode.pos`) commands targeting the configured `arm_stable_pos` and `grip_stable_pos` for **both** arms independently. It waits until all joints of **both** arms are within `arrive_threshold` radians of the target.
+3. **Init phase** — On `start()`, a teleop monitor thread begins polling the `keys` topic at 100 Hz. The main loop then enters the init phase, publishing position-mode (`HexArmCtrlMode.pos`) commands targeting the configured `arm_stable_pos` and `grip_stable_pos` for **both** arms. It waits until all joints of **both** arms are within `arrive_threshold` radians of the target.
 
-4. **Work phase** — Once both arms have arrived at the stable position, the template switches to compensation mode (`HexArmCtrlMode.comp`), publishing zero-vector commands each cycle for each arm. This keeps both arms in a gravity-compensated, freely movable state, ready for dual-arm teleoperation or autonomous manipulation.
+4. **Work phase** — Once both arms have arrived at the stable position, the node transitions into the work loop, which consists of three sub-stages:
+   - **Load**: Parses the MCAP bag file using `HexMcapReader`, extracting `left_arm_state`, `right_arm_state`, `left_grip_state`, and `right_grip_state` time-series arrays. The common bag time range is determined by the intersection of all arm data time ranges. If no bag data is found, the node exits gracefully.
+   - **Prep**: Drives both arms and grippers to their respective bag starting joint positions using position-mode commands. Once **both** arms arrive within `arrive_threshold` and a short countdown elapses, a `record=True` signal is published to trigger external data recording (e.g., via `hex_flow_node_data`).
+   - **Run**: Replays the dual-arm trajectory by time-interpolating (`time_interp`) arm positions and velocities at each control cycle from the bag data. Commands are published in compensation mode (`HexArmCtrlMode.comp`) with the configured PID gains. When the bag end timestamp is reached, a `record=False` signal is published, and the loop increments (if `LOOP_COUNT > 1`, the prep+run sub-stages repeat).
 
-5. **Exit phase** — When the `q` key is pressed (detected by the teleop thread) or `Ctrl+C` is received, the template re-enters the position-mode control loop, driving both arms back to `arm_stable_pos` / `grip_stable_pos` before stopping the node. This ensures a safe, repeatable shutdown.
+5. **Exit phase** — When the `q` key is pressed (detected by the teleop thread) or `Ctrl+C` is received, the node publishes `record=False`, then re-enters the position-mode control loop, driving both arms back to `arm_stable_pos` / `grip_stable_pos` before stopping the node. This ensures a safe, repeatable shutdown.
 
-This architecture decouples the template's lifecycle logic from the underlying robot hardware interface — the template interacts solely through Zenoh topics, making it compatible with both real E3 Desktop hardware and MuJoCo simulation without code changes.
+This architecture decouples the replay logic from the underlying robot hardware interface — the node interacts solely through Zenoh topics, making it compatible with both real E3 Desktop hardware and MuJoCo simulation without code changes.
 
 # 📄 License
 
@@ -593,10 +727,10 @@ Apache License 2.0. See [LICENSE](LICENSE).
 
 # 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=hexfellow/hex_flow_template_e3_desktop&type=Date)](https://star-history.com/#hexfellow/hex_flow_template_e3_desktop&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=hexfellow/hex_flow_replay_e3_desktop&type=Date)](https://star-history.com/#hexfellow/hex_flow_replay_e3_desktop&Date)
 
 # 👥 Contributors
 
-<a href="https://github.com/hexfellow/hex_flow_template_e3_desktop/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=hexfellow/hex_flow_template_e3_desktop" />
+<a href="https://github.com/hexfellow/hex_flow_replay_e3_desktop/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=hexfellow/hex_flow_replay_e3_desktop" />
 </a>
